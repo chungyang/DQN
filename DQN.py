@@ -31,6 +31,6 @@ class DQN(nn.Module):
 
         if res_connection:
             x += res_connection
-            
+
         x = F.relu(self.bn3(self.conv3(x)))
         return self.head(x.view(x.size(0), -1))
