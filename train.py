@@ -11,12 +11,11 @@ from utils import *
 from itertools import count
 import matplotlib.pyplot as plt
 
-def select_action(state,opt):
-    global steps_done
+def select_action(state,opt, device):
     sample = random.random()
     eps_threshold = opt.eps_end + (opt.eps_start - opt.eps_end) * \
-        math.exp(-1. * steps_done / opt.eps_decay)
-    steps_done += 1
+        math.exp(-1. * opt.steps_done / opt.eps_decay)
+    opt.steps_done += 1
     if sample > eps_threshold:
         with torch.no_grad():
             # t.max(1) will return largest column value of each row.
@@ -105,7 +104,7 @@ def train(env, device, opt):
         state = current_screen - last_screen
         for t in count():
             # Select and perform an action
-            action = select_action(state, opt)
+            action = select_action(state, opt, device)
             _, reward, done, _ = env.step(action.item())
             reward = torch.tensor([reward], device=device)
 
@@ -127,13 +126,15 @@ def train(env, device, opt):
             optimize_model(opt)
             if done:
                 opt.episode_durations.append(t + 1)
-                plot_durations(opt.episode_durations)
+                if i_episode % opt.plot_every == 0:
+                    plot_durations(opt.episode_durations)
                 break
+
         # Update the target network, copying all weights and biases in DQN
         if i_episode % opt.target_update == 0:
             opt.target_net.load_state_dict(opt.policy_net.state_dict())
 
-    torch.save(opt.policy_net.state_dict(), "policy_net.pt")
+    torch.save({"settings": opt, "state_dict" : opt.policy_net.state_dict()}, "policy_net.pt")
     torch.save(opt.policy_net.state_dict(), "target_net.pt")
 
 
@@ -147,6 +148,7 @@ if __name__ == "__main__":
     parser.add_argument('-eps_end', type=float, default=0.05)
     parser.add_argument('-eps_decay', type=int, default=200)
     parser.add_argument('-target_update', type=int, default=10)
+    parser.add_argument('-plot_every', type=int, default=5)
     parser.add_argument('-env', type=str, default='CartPole-v0')
 
 
@@ -173,14 +175,11 @@ if __name__ == "__main__":
     opt.memory = ReplayMemory(10000)
     opt.episode_durations = []
 
-    steps_done = 0
+    opt.steps_done = 0
 
     train(env,device, opt)
 
     print('Complete')
-    env.render()
-    env.close()
-    plt.ioff()
-    plt.show()
+
 
 
