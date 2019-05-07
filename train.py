@@ -96,6 +96,10 @@ def plot_durations(episode_durations):
 
 def train(env, device, opt):
 
+    best_policy_states = None
+    best_target_states = None
+    best_t = 0
+
     for i_episode in range(opt.num_episodes):
         # Initialize the environment and state
         env.reset()
@@ -126,7 +130,12 @@ def train(env, device, opt):
             optimize_model(opt)
             if done:
                 opt.episode_durations.append(t + 1)
-                if i_episode % opt.plot_every == 0:
+                if t > best_t:
+                    best_policy_states = opt.policy_net.state_dict()
+                    best_target_states = opt.target_net.state_dict()
+                    best_t = t
+                    print(best_t)
+                if (i_episode + 1) % opt.plot_every == 0:
                     plot_durations(opt.episode_durations)
                 break
 
@@ -134,8 +143,8 @@ def train(env, device, opt):
         if i_episode % opt.target_update == 0:
             opt.target_net.load_state_dict(opt.policy_net.state_dict())
 
-    torch.save({"settings": opt, "state_dict" : opt.policy_net.state_dict()}, "policy_net.pt")
-    torch.save(opt.policy_net.state_dict(), "target_net.pt")
+    torch.save({"settings": opt, "state_dict" : best_policy_states}, "policy_net.pt")
+    torch.save(best_target_states, "target_net.pt")
 
 
 
@@ -180,6 +189,6 @@ if __name__ == "__main__":
     train(env,device, opt)
 
     print('Complete')
-
+    env.close()
 
 
