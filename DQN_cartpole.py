@@ -11,13 +11,14 @@ from utils import *
 class DQN(nn.Module):
     def __init__(self, num_inputs, num_actions):
         super(DQN, self).__init__()
+        self.num_actions = num_actions
 
         self.layers = nn.Sequential(
-            nn.Linear(env.observation_space.shape[0], 128),
+            nn.Linear(num_inputs, 128),
             nn.ReLU(),
             nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(128, env.action_space.n)
+            nn.Linear(128, num_actions)
         )
 
     def forward(self, x):
@@ -29,7 +30,7 @@ class DQN(nn.Module):
             q_value = self.forward(state)
             action = q_value.max(1)[1].item()
         else:
-            action = random.randrange(env.action_space.n)
+            action = random.randrange(self.num_actions)
         return action
 
 
@@ -55,6 +56,11 @@ def train(env, num_frames, model, gamma, replay_buffer_size, batch_size):
             print(episode_reward)
             state = env.reset()
             all_rewards.append(episode_reward)
+
+            if np.mean(np.mean(all_rewards[-7:])==200):
+                plot(frame_idx, all_rewards, losses)
+                break
+
             episode_reward = 0
 
         if len(replay_buffer) > batch_size:
@@ -67,7 +73,7 @@ def train(env, num_frames, model, gamma, replay_buffer_size, batch_size):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-num_frames',  default=10000)
+    parser.add_argument('-num_frames',  default=20000)
     parser.add_argument('-replay_buffer_size', default=1000)
     parser.add_argument('-batch_size', default=32)
     parser.add_argument('-gamma', default=0.99)
@@ -90,4 +96,7 @@ if __name__ == "__main__":
 
     train(env, opt.num_frames, model, opt.gamma, opt.replay_buffer_size, opt.batch_size)
 
-    torch.save(model.state_dict(),"./pretrained/cartpole_states.pt")
+    torch.save({"n_input":env.observation_space.shape[0],
+                "n_action":env.action_space.n,
+                "states": model.state_dict()},
+               "./pretrained/cartpole_states.pt")
