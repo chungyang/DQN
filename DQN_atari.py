@@ -81,8 +81,8 @@ def train(env, model, opt):
             loss = compute_td_loss(model, optimizer, opt.batch_size, opt.gamma, replay_buffer)
             losses.append(loss.item())
 
-        if frame_idx % 100000 == 0:
-            plot(frame_idx, all_rewards)
+        # if frame_idx % 100000 == 0:
+        #     plot(frame_idx, all_rewards)
 
 if __name__ == "__main__":
 
