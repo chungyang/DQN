@@ -44,7 +44,7 @@ class CnnDQN(nn.Module):
             q_value = self.forward(state)
             action = q_value.max(1)[1].item()
         else:
-            action = random.randrange(env.action_space.n)
+            action = random.randrange(self.num_actions )
         return action
 
 
@@ -116,5 +116,8 @@ if __name__ == "__main__":
 
     train(env,model,opt)
 
-    torch.save(model,"/pretrained/atari_model.pt")
+    torch.save({"n_input":env.observation_space.shape,
+                "n_action":env.action_space.n,
+                "states":model.load_state_dict()},
+                "/pretrained/atari_states.pt")
 
