@@ -115,6 +115,8 @@ def compute_td_loss(batch_size):
     loss.backward()
     optimizer.step()
 
+    return loss
+
 
 
 model = CnnDQN(env.observation_space.shape, env.action_space.n)
@@ -154,6 +156,7 @@ for frame_idx in range(1, num_frames + 1):
     episode_reward += reward
 
     if done:
+        print(len(replay_buffer))
         state = env.reset()
         all_rewards.append(episode_reward)
         episode_reward = 0

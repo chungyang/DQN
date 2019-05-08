@@ -151,5 +151,5 @@ for frame_idx in range(1, num_frames + 1):
         loss = compute_td_loss(batch_size)
         losses.append(loss.item())
 
-    # if frame_idx % 200 == 0:
-    #     plot(frame_idx, all_rewards, losses)
+    if frame_idx % 200 == 0:
+        plot(frame_idx, all_rewards, losses)
