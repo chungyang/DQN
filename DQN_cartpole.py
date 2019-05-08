@@ -61,7 +61,7 @@ def train(env, num_frames, model, gamma, replay_buffer_size, batch_size):
             loss = compute_td_loss(model, optimizer, batch_size, gamma, replay_buffer)
             losses.append(loss.item())
 
-        if frame_idx % 200 == 0:
+        if frame_idx % 10000 == 0:
             plot(frame_idx, all_rewards, losses)
 
 if __name__ == "__main__":
@@ -88,10 +88,6 @@ if __name__ == "__main__":
     if USE_CUDA:
         model = model.cuda()
 
-
-    num_frames = 10000
-    replay_buffer_size = 10000
-    batch_size = 32
-    gamma = 0.99
-
     train(env, opt.num_frames, model, opt.gamma, opt.replay_buffer_size, opt.batch_size)
+
+    torch.save(model.state_dict(),"./pretrained/cartpole_states.pt")

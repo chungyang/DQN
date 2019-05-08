@@ -114,5 +114,7 @@ if __name__ == "__main__":
     epsilon_by_frame = lambda frame_idx: epsilon_final + (epsilon_start - epsilon_final) * math.exp(
         -1. * frame_idx / epsilon_decay)
 
-
     train(env,model,opt)
+
+    torch.save(model.state_dict(),"/pretrained/atari_states.pt")
+
