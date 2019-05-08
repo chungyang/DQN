@@ -116,5 +116,5 @@ if __name__ == "__main__":
 
     train(env,model,opt)
 
-    torch.save(model.state_dict(),"/pretrained/atari_states.pt")
+    torch.save(model,"/pretrained/atari_model.pt")
 
