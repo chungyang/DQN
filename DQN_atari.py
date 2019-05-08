@@ -123,7 +123,7 @@ if USE_CUDA:
 
 optimizer = optim.Adam(model.parameters(), lr=0.00001)
 
-replay_initial = 10000
+replay_initial = 1000
 replay_buffer = ReplayBuffer(100000)
 
 epsilon_start = 1.0
@@ -145,7 +145,6 @@ for frame_idx in range(1, num_frames + 1):
     epsilon = epsilon_by_frame(frame_idx)
     action = model.act(state, epsilon)
 
-    env.render()
     next_state, reward, done, _ = env.step(action)
     replay_buffer.push(state, action, reward, next_state, done)
 
@@ -153,14 +152,14 @@ for frame_idx in range(1, num_frames + 1):
     episode_reward += reward
 
     if done:
-        print(len(replay_buffer))
+        print(episode_reward)
         state = env.reset()
         all_rewards.append(episode_reward)
         episode_reward = 0
 
-    # if len(replay_buffer) > replay_initial:
-    #     loss = compute_td_loss(batch_size)
-    #     losses.append(loss.item())
-    #
-    if frame_idx % 10000 == 0:
+    if len(replay_buffer) > replay_initial:
+        loss = compute_td_loss(batch_size)
+        losses.append(loss.item())
+
+    if frame_idx % 100000 == 0:
         plot(frame_idx, all_rewards)

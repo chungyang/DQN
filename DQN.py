@@ -132,7 +132,6 @@ for frame_idx in range(1, num_frames + 1):
     epsilon = epsilon_by_frame(frame_idx)
     action = model.act(state, epsilon)
 
-    env.render()
     next_state, reward, done, _ = env.step(action)
     replay_buffer.push(state, action, reward, next_state, done)
 
