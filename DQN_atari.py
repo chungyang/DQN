@@ -82,15 +82,12 @@ class CnnDQN(nn.Module):
         return action
 
 
-def plot(frame_idx, rewards, losses):
+def plot(frame_idx, rewards):
     clear_output(True)
     plt.figure(figsize=(20,5))
     plt.subplot(131)
     plt.title('frame %s. reward: %s' % (frame_idx, np.mean(rewards[-10:])))
     plt.plot(rewards)
-    plt.subplot(132)
-    plt.title('loss')
-    plt.plot(losses)
     plt.show()
 
 def compute_td_loss(batch_size):
@@ -161,9 +158,9 @@ for frame_idx in range(1, num_frames + 1):
         all_rewards.append(episode_reward)
         episode_reward = 0
 
-    if len(replay_buffer) > replay_initial:
-        loss = compute_td_loss(batch_size)
-        losses.append(loss.item())
-
+    # if len(replay_buffer) > replay_initial:
+    #     loss = compute_td_loss(batch_size)
+    #     losses.append(loss.item())
+    #
     if frame_idx % 10000 == 0:
-        plot(frame_idx, all_rewards, losses)
+        plot(frame_idx, all_rewards)
