@@ -1,45 +1,11 @@
-from wrappers import make_atari, wrap_deepmind, wrap_pytorch
 import math, random
-
-import gym
-import numpy as np
-
-import torch
 import torch.nn as nn
 import torch.optim as optim
-import torch.autograd as autograd
-import torch.nn.functional as F
+import argparse
 
-from IPython.display import clear_output
-import matplotlib.pyplot as plt
-
-USE_CUDA = torch.cuda.is_available()
-Variable = lambda *args, **kwargs: autograd.Variable(*args, **kwargs).cuda() if USE_CUDA else autograd.Variable(*args, **kwargs)
-
-from collections import deque
-
-
-env_id = "PongNoFrameskip-v4"
-env    = make_atari(env_id)
-env    = wrap_deepmind(env)
-env    = wrap_pytorch(env)
-
-class ReplayBuffer(object):
-    def __init__(self, capacity):
-        self.buffer = deque(maxlen=capacity)
-
-    def push(self, state, action, reward, next_state, done):
-        state = np.expand_dims(state, 0)
-        next_state = np.expand_dims(next_state, 0)
-
-        self.buffer.append((state, action, reward, next_state, done))
-
-    def sample(self, batch_size):
-        state, action, reward, next_state, done = zip(*random.sample(self.buffer, batch_size))
-        return np.concatenate(state), action, reward, np.concatenate(next_state), done
-
-    def __len__(self):
-        return len(self.buffer)
+from wrappers import make_atari, wrap_deepmind, wrap_pytorch
+from utils import *
+from ReplayBuffer import ReplayBuffer
 
 class CnnDQN(nn.Module):
     def __init__(self, input_shape, num_actions):
@@ -82,86 +48,71 @@ class CnnDQN(nn.Module):
         return action
 
 
-def plot(frame_idx, rewards):
-    clear_output(True)
-    plt.figure(figsize=(20,5))
-    plt.subplot(131)
-    plt.title('frame %s. reward: %s' % (frame_idx, np.mean(rewards[-10:])))
-    plt.plot(rewards)
-    plt.show()
-
-def compute_td_loss(batch_size):
-    state, action, reward, next_state, done = replay_buffer.sample(batch_size)
-
-    state = Variable(torch.FloatTensor(np.float32(state)))
-    next_state = Variable(torch.FloatTensor(np.float32(next_state)), volatile=True)
-    action = Variable(torch.LongTensor(action))
-    reward = Variable(torch.FloatTensor(reward))
-    done = Variable(torch.FloatTensor(done))
-
-    q_values = model(state)
-    next_q_values = model(next_state)
-
-    q_value = q_values.gather(1, action.unsqueeze(1)).squeeze(1)
-    next_q_value = next_q_values.max(1)[0]
-    expected_q_value = reward + gamma * next_q_value * (1 - done)
-
-    loss = (q_value - Variable(expected_q_value.data)).pow(2).mean()
-
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-
-    return loss
 
 
+def train(env, model, opt):
+    losses = []
+    all_rewards = []
+    episode_reward = 0
 
-model = CnnDQN(env.observation_space.shape, env.action_space.n)
+    optimizer = optim.Adam(model.parameters(), opt.lr)
+    replay_buffer = ReplayBuffer(opt.replay_buffer_size)
 
-if USE_CUDA:
-    model = model.cuda()
+    state = env.reset()
+    episode_n = 0
+    for frame_idx in range(1, opt.num_frames + 1):
+        epsilon = epsilon_by_frame(frame_idx)
+        action = model.act(state, epsilon)
 
-optimizer = optim.Adam(model.parameters(), lr=0.00001)
+        next_state, reward, done, _ = env.step(action)
+        replay_buffer.push(state, action, reward, next_state, done)
 
-replay_initial = 10000
-replay_buffer = ReplayBuffer(100000)
+        state = next_state
+        episode_reward += reward
 
-epsilon_start = 1.0
-epsilon_final = 0.01
-epsilon_decay = 30000
+        if done:
+            print(episode_n, " ", episode_reward)
+            episode_n += 1
+            state = env.reset()
+            all_rewards.append(episode_reward)
+            episode_reward = 0
 
-epsilon_by_frame = lambda frame_idx: epsilon_final + (epsilon_start - epsilon_final) * math.exp(-1. * frame_idx / epsilon_decay)
+        if len(replay_buffer) > opt.replay_initial:
+            loss = compute_td_loss(model, optimizer, opt.batch_size, opt.gamma, replay_buffer)
+            losses.append(loss.item())
 
-num_frames = 1400000
-batch_size = 32
-gamma = 0.99
+        if frame_idx % 100000 == 0:
+            plot(frame_idx, all_rewards)
 
-losses = []
-all_rewards = []
-episode_reward = 0
+if __name__ == "__main__":
 
-state = env.reset()
-episode_n = 0
-for frame_idx in range(1, num_frames + 1):
-    epsilon = epsilon_by_frame(frame_idx)
-    action = model.act(state, epsilon)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-num_frames',  default=1400000)
+    parser.add_argument('-replay_buffer_size', default=100000)
+    parser.add_argument('-replay_initial', default=10000)
+    parser.add_argument('-batch_size', default=32)
+    parser.add_argument('-gamma', default=0.99)
+    parser.add_argument('-lr', default=0.00001)
 
-    next_state, reward, done, _ = env.step(action)
-    replay_buffer.push(state, action, reward, next_state, done)
 
-    state = next_state
-    episode_reward += reward
+    opt = parser.parse_args()
 
-    if done:
-        print(episode_n, " ", episode_reward)
-        episode_n += 1
-        state = env.reset()
-        all_rewards.append(episode_reward)
-        episode_reward = 0
+    env_id = "PongNoFrameskip-v4"
+    env = make_atari(env_id)
+    env = wrap_deepmind(env)
+    env = wrap_pytorch(env)
 
-    if len(replay_buffer) > replay_initial:
-        loss = compute_td_loss(batch_size)
-        losses.append(loss.item())
+    model = CnnDQN(env.observation_space.shape, env.action_space.n)
 
-    if frame_idx % 100000 == 0:
-        plot(frame_idx, all_rewards)
+    if USE_CUDA:
+        model = model.cuda()
+
+    epsilon_start = 1.0
+    epsilon_final = 0.01
+    epsilon_decay = 30000
+
+    epsilon_by_frame = lambda frame_idx: epsilon_final + (epsilon_start - epsilon_final) * math.exp(
+        -1. * frame_idx / epsilon_decay)
+
+
+    train(env,model,opt)
