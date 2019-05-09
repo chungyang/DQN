@@ -5,7 +5,7 @@ import argparse
 
 from wrappers import make_atari, wrap_deepmind, wrap_pytorch
 from utils import *
-from ReplayBuffer import ReplayBuffer
+from ReplayBuffer import ReplayBuffer, PrioritizedReplayBuffer
 
 class CnnDQN(nn.Module):
     def __init__(self, input_shape, num_actions):
@@ -56,7 +56,10 @@ def train(env, model, opt):
     episode_reward = 0
 
     optimizer = optim.Adam(model.parameters(), opt.lr)
-    replay_buffer = ReplayBuffer(opt.replay_buffer_size)
+    if opt.prioritize:
+        replay_buffer = PrioritizedReplayBuffer(opt.replay_buffer_size, alpha=0.6)
+    else:
+        replay_buffer = ReplayBuffer(opt.replay_buffer_size)
 
     state = env.reset()
     episode_n = 0
@@ -78,7 +81,7 @@ def train(env, model, opt):
             episode_reward = 0
 
         if len(replay_buffer) > opt.replay_initial:
-            loss = compute_td_loss(model, optimizer, opt.batch_size, opt.gamma, replay_buffer)
+            loss = compute_td_loss(model, optimizer, opt.batch_size, opt.gamma, replay_buffer, prioritize=opt.prioritize)
             losses.append(loss.item())
 
         # if frame_idx % 100000 == 0:
@@ -93,6 +96,8 @@ if __name__ == "__main__":
     parser.add_argument('-batch_size', default=32)
     parser.add_argument('-gamma', default=0.99)
     parser.add_argument('-lr', default=0.00001)
+    parser.add_argument('-prioritize', default=True)
+
 
 
     opt = parser.parse_args()

@@ -67,7 +67,7 @@ def train(env, num_frames, model, gamma, replay_buffer_size, batch_size, use_pri
             episode_reward = 0
 
         if len(replay_buffer) > batch_size:
-            loss = compute_td_loss(model, optimizer, batch_size, gamma, replay_buffer)
+            loss = compute_td_loss(model, optimizer, batch_size, gamma, replay_buffer, prioritize=use_prioritize)
             losses.append(loss.item())
 
         if frame_idx % 10000 == 0:
@@ -80,6 +80,7 @@ if __name__ == "__main__":
     parser.add_argument('-replay_buffer_size', default=1000)
     parser.add_argument('-batch_size', default=32)
     parser.add_argument('-gamma', default=0.99)
+    parser.add_argument('-prioritize', default=True)
 
     opt = parser.parse_args()
 
@@ -97,7 +98,7 @@ if __name__ == "__main__":
     if USE_CUDA:
         model = model.cuda()
 
-    train(env, opt.num_frames, model, opt.gamma, opt.replay_buffer_size, opt.batch_size)
+    train(env, opt.num_frames, model, opt.gamma, opt.replay_buffer_size, opt.batch_size, use_prioritize=opt.prioritize)
 
     torch.save({"n_input":env.observation_space.shape[0],
                 "n_action":env.action_space.n,
