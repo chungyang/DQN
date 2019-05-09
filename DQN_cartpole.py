@@ -60,7 +60,7 @@ def train(env, num_frames, model, gamma, replay_buffer_size, batch_size, use_pri
             state = env.reset()
             all_rewards.append(episode_reward)
 
-            if np.mean(np.mean(all_rewards[-7:])==200):
+            if np.mean(np.mean(all_rewards[-10:])==200):
                 plot(frame_idx, all_rewards, losses)
                 break
 
@@ -103,4 +103,4 @@ if __name__ == "__main__":
     torch.save({"n_input":env.observation_space.shape[0],
                 "n_action":env.action_space.n,
                 "states": model.state_dict()},
-               "./pretrained/cartpole_states.pt")
+               "./pretrained/cartpole_prio_states.pt")
