@@ -39,10 +39,10 @@ def compute_td_loss(model, optimizer, batch_size, gamma, replay_buffer, prioriti
 def plot(frame_idx, rewards, losses):
     clear_output(True)
     plt.figure(figsize=(20,5))
-    plt.subplot(131)
+    plt.subplot(121)
     plt.title('frame %s. reward: %s' % (frame_idx, np.mean(rewards[-10:])))
     plt.plot(rewards)
-    plt.subplot(132)
+    plt.subplot(122)
     plt.title('loss')
     plt.plot(losses)
     plt.show()
