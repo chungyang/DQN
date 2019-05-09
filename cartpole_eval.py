@@ -12,10 +12,13 @@ if __name__ == "__main__":
     env = gym.make(env_id)
 
     state = env.reset()
-
+    total_reward = 0
     while True:
         env.render()
         action = model.act(state, -1)
         next_state, reward, done, _ = env.step(action)
         state = next_state
+        total_reward += reward
+
+    print(total_reward)
 

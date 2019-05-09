@@ -9,8 +9,11 @@ USE_CUDA = torch.cuda.is_available()
 Variable = lambda *args, **kwargs: autograd.Variable(*args, **kwargs).cuda() if USE_CUDA else autograd.Variable(*args, **kwargs)
 
 
-def compute_td_loss(model, optimizer, batch_size, gamma, replay_buffer):
-    state, action, reward, next_state, done = replay_buffer.sample(batch_size)
+def compute_td_loss(model, optimizer, batch_size, gamma, replay_buffer, prioritize=True, beta=0.6):
+    if prioritize:
+        state, action, reward, next_state, done, weights, indices = replay_buffer.sample(batch_size,beta)
+    else:
+        state, action, reward, next_state, done = replay_buffer.sample(batch_size)
 
     state = Variable(torch.FloatTensor(np.float32(state)))
     next_state = Variable(torch.FloatTensor(np.float32(next_state)), volatile=True)

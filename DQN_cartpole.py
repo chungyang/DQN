@@ -4,7 +4,7 @@ import torch.optim as optim
 import argparse
 
 from torch import nn
-from ReplayBuffer import ReplayBuffer
+from ReplayBuffer import *
 from utils import *
 
 
@@ -34,11 +34,14 @@ class DQN(nn.Module):
         return action
 
 
-def train(env, num_frames, model, gamma, replay_buffer_size, batch_size):
+def train(env, num_frames, model, gamma, replay_buffer_size, batch_size, use_prioritize=True, alpha=0.6):
     losses = []
     all_rewards = []
     optimizer = optim.Adam(model.parameters())
-    replay_buffer = ReplayBuffer(replay_buffer_size)
+    if use_prioritize:
+        replay_buffer = PrioritizedReplayBuffer(replay_buffer_size, alpha)
+    else:
+        replay_buffer = ReplayBuffer(replay_buffer_size)
 
     state = env.reset()
     episode_reward = 0
